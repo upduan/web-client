@@ -12,7 +12,7 @@
 #define log_fatal BOOST_LOG_TRIVIAL(fatal)
 
 namespace util::Log {
-    void init(std::string const& filename_prefix) noexcept;
+    void init(std::string const& filename_prefix, boost::log::trivial::severity_level level) noexcept;
     void start_clean_routine(int days) noexcept;
     void stop_clean_routine() noexcept;
 } // namespace util::Log

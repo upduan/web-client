@@ -18,7 +18,7 @@ namespace util::Log {
         std::shared_ptr<std::thread> clean_thread;
     } // namespace
 
-    void init(std::string const& filename_prefix) noexcept {
+    void init(std::string const& filename_prefix, boost::log::trivial::severity_level level) noexcept {
         if (!std::filesystem::exists(log_folder)) {
             std::filesystem::create_directories(log_folder);
         }
@@ -30,7 +30,8 @@ namespace util::Log {
         auto core = boost::log::core::get();
         core->add_sink(sink);
         core->add_sink(console_sink);
-        core->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
+        // core->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
+        core->set_filter(boost::log::trivial::severity >= level);
         boost::log::add_common_attributes();
     }
 
