@@ -105,11 +105,11 @@ namespace util::WebSocket {
             if (ws_) {
                 ws_->binary(true);
                 boost::beast::get_lowest_layer(*ws_).expires_after(std::chrono::seconds(2));
-                // FIXME ws_->async_write(boost::asio::buffer(content), boost::beast::bind_front_handler(&Client::on_write, shared_from_this()));
+                ws_->async_write(boost::asio::buffer(content.data(), content.size()), boost::beast::bind_front_handler(&Client::on_write, shared_from_this()));
             } else if (wss_) {
                 wss_->binary(true);
                 boost::beast::get_lowest_layer(*wss_).expires_after(std::chrono::seconds(2));
-                // FIXME wss_->async_write(boost::asio::buffer(content), boost::beast::bind_front_handler(&Client::on_write, shared_from_this()));
+                wss_->async_write(boost::asio::buffer(content.data(), content.size()), boost::beast::bind_front_handler(&Client::on_write, shared_from_this()));
             }
         }
 
@@ -291,7 +291,7 @@ namespace util::WebSocket {
                         m->on_message(shared_from_this(), std::string_view(reinterpret_cast<char*>(data.data()), data.size()));
                         break;
                     case 2:
-                        // FIXME m->on_message(shared_from_this(), std::span<std::byte>(data.data(), data.size()));
+                        m->on_message(shared_from_this(), std::span<std::byte>((std::byte*)data.data(), data.size()));
                         break;
                     }
                 }
