@@ -12,6 +12,7 @@
 #include <boost/beast/version.hpp>
 #include <boost/url.hpp>
 
+#include "Log.h"
 #include "root_certificates.hpp"
 
 namespace util::Http {
