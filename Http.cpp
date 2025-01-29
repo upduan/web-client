@@ -39,37 +39,33 @@ namespace util::Http {
             return result;
         }
 
+        std::map<std::string, boost::beast::http::verb> name_to_verb = {
+            {"GET", boost::beast::http::verb::get}, {"POST", boost::beast::http::verb::post}, {"PUT", boost::beast::http::verb::put}, {"DELETE", boost::beast::http::verb::delete_},
+            {"HEAD", boost::beast::http::verb::head}, {"PATCH", boost::beast::http::verb::patch}, {"PURGE", boost::beast::http::verb::purge},
+            {"LINK", boost::beast::http::verb::link}, {"UNLINK", boost::beast::http::verb::unlink}, {"CONNECT", boost::beast::http::verb::connect},
+            {"OPTIONS", boost::beast::http::verb::options}, {"TRACE", boost::beast::http::verb::trace}, {"COPY", boost::beast::http::verb::copy},
+            {"LOCK", boost::beast::http::verb::lock}, {"MOVE", boost::beast::http::verb::move}, {"MKCOL", boost::beast::http::verb::mkcol},
+            {"PROPFIND", boost::beast::http::verb::propfind}, {"PROPPATCH", boost::beast::http::verb::proppatch}, {"SEARCH", boost::beast::http::verb::search},
+            {"BIND", boost::beast::http::verb::bind}, {"REBIND", boost::beast::http::verb::rebind}, {"UNBIND", boost::beast::http::verb::unbind},
+            {"ACL", boost::beast::http::verb::acl}, {"REPORT", boost::beast::http::verb::report}, {"MKACTIVITY", boost::beast::http::verb::mkactivity},
+            {"CHECKOUT", boost::beast::http::verb::checkout}, {"MERGE", boost::beast::http::verb::merge}, {"MSEARCH", boost::beast::http::verb::msearch},
+            {"NOTIFY", boost::beast::http::verb::notify}, {"SUBSCRIBE", boost::beast::http::verb::subscribe}, {"UNSUBSCRIBE", boost::beast::http::verb::unsubscribe},
+            // {"QUERY", boost::beast::http::verb::query},
+        };
+
+        boost::beast::http::verb get_verb_by_name(const std::string& method) noexcept {
+            boost::beast::http::verb result = boost::beast::http::verb::unknown;
+            if (auto it = name_to_verb.find(method); it != name_to_verb.end()) {
+                result = it->second;
+            }
+            return result;
+        }
+
         boost::beast::http::request<boost::beast::http::string_body> construct_request(std::string const& method, std::string const& host, std::string const& target,
             std::map<std::string, std::string> const& headers, std::string const& body) noexcept {
             // Set up an HTTP GET request message
             constexpr int version = 11;
-            boost::beast::http::verb httpMethod = boost::beast::http::verb::unknown;
-            if (method == "GET") {
-                httpMethod = boost::beast::http::verb::get;
-            } else if (method == "POST") {
-                httpMethod = boost::beast::http::verb::post;
-            } else if (method == "PUT") {
-                httpMethod = boost::beast::http::verb::put;
-            } else if (method == "DELETE") {
-                httpMethod = boost::beast::http::verb::delete_;
-            } else if (method == "HEAD") {
-                httpMethod = boost::beast::http::verb::head;
-            } else if (method == "PATCH") {
-                httpMethod = boost::beast::http::verb::patch;
-            } else if (method == "PURGE") {
-                httpMethod = boost::beast::http::verb::purge;
-            } else if (method == "LINK") {
-                httpMethod = boost::beast::http::verb::link;
-            } else if (method == "UNLINK") {
-                httpMethod = boost::beast::http::verb::unlink;
-            } else if (method == "CONNECT") {
-                httpMethod = boost::beast::http::verb::connect;
-            } else if (method == "OPTIONS") {
-                httpMethod = boost::beast::http::verb::options;
-            } else if (method == "TRACE") {
-                httpMethod = boost::beast::http::verb::trace;
-            }
-            boost::beast::http::request<boost::beast::http::string_body> req{httpMethod, target, version};
+            boost::beast::http::request<boost::beast::http::string_body> req{get_verb_by_name(method), target, version};
             for (auto const& [key, value] : headers) {
                 req.insert(key, value);
             }
@@ -87,33 +83,7 @@ namespace util::Http {
             std::map<std::string, std::string> const& headers, std::string_view body) noexcept {
             // Set up an HTTP GET request message
             constexpr int version = 11;
-            boost::beast::http::verb httpMethod = boost::beast::http::verb::unknown;
-            if (method == "GET") {
-                httpMethod = boost::beast::http::verb::get;
-            } else if (method == "POST") {
-                httpMethod = boost::beast::http::verb::post;
-            } else if (method == "PUT") {
-                httpMethod = boost::beast::http::verb::put;
-            } else if (method == "DELETE") {
-                httpMethod = boost::beast::http::verb::delete_;
-            } else if (method == "HEAD") {
-                httpMethod = boost::beast::http::verb::head;
-            } else if (method == "PATCH") {
-                httpMethod = boost::beast::http::verb::patch;
-            } else if (method == "PURGE") {
-                httpMethod = boost::beast::http::verb::purge;
-            } else if (method == "LINK") {
-                httpMethod = boost::beast::http::verb::link;
-            } else if (method == "UNLINK") {
-                httpMethod = boost::beast::http::verb::unlink;
-            } else if (method == "CONNECT") {
-                httpMethod = boost::beast::http::verb::connect;
-            } else if (method == "OPTIONS") {
-                httpMethod = boost::beast::http::verb::options;
-            } else if (method == "TRACE") {
-                httpMethod = boost::beast::http::verb::trace;
-            }
-            boost::beast::http::request<boost::beast::http::string_body> req{httpMethod, target, version};
+            boost::beast::http::request<boost::beast::http::string_body> req{get_verb_by_name(method), target, version};
             for (auto const& [key, value] : headers) {
                 req.insert(key, value);
             }
@@ -174,24 +144,19 @@ namespace util::Http {
                 log_error << "SSL stream is null, cannot shut down.";
                 return;
             }
-
             boost::beast::error_code ec;
             auto& socket = stream->next_layer().socket(); // 缓存底层套接字
-
             // 尝试优雅地关闭 SSL 流
             stream->shutdown(ec);
-
             // 处理 SSL 关闭时的特定错误
             if (ec && ec != boost::asio::ssl::error::stream_truncated) {
                 log_error << "SSL shutdown error: " << ec.message();
                 return;
             }
-
             // 如果有 stream_truncated 错误，意味着对方没有发送关闭通知，但通常这种情况可以忽略
             if (ec == boost::asio::ssl::error::stream_truncated) {
                 log_trace << "SSL stream truncated, ignoring error.";
             }
-
             // 确保底层套接字关闭
             if (socket.is_open()) {
                 socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -199,7 +164,6 @@ namespace util::Http {
                     log_error << "Socket shutdown error: " << ec.message();
                     return;
                 }
-
                 socket.close(ec);
                 if (ec) {
                     log_error << "Socket close error: " << ec.message();
@@ -216,34 +180,30 @@ namespace util::Http {
                 log_error << "Stream is null, cannot shut down.";
                 return;
             }
-
             boost::beast::error_code ec;
             auto& socket = stream->socket(); // 缓存 socket 对象
-
             // 优雅地关闭套接字
             socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-
             // 对于 not_connected 错误，我们忽略并返回，不记录“关闭成功”的错误日志
             if (ec && ec != boost::beast::errc::not_connected) {
                 log_error << "Error during shutdown: " << ec.message();
                 return;
             }
-
             // 如果套接字仍然打开，尝试关闭它
             if (socket.is_open()) {
                 socket.close(ec);
                 if (ec) {
                     log_error << "Error during close: " << ec.message();
                 } else {
-                   // log_trace << "Socket successfully closed.";
+                    // log_trace << "Socket successfully closed.";
                 }
             } else {
                 log_trace << "Socket already closed or not connected.";
             }
         }
 
-        void process(std::pair<int, std::string> r, std::string const& method, std::map<std::string, std::string> const& headers, std::string_view body,
-            std::string&& return_body, std::function<void(std::string&& reponse)>&& post_processor) noexcept {
+        void process(std::pair<int, std::string> r, std::string const& method, std::map<std::string, std::string> const& headers, std::string_view body, std::string&& return_body,
+            std::function<void(std::string&& reponse)>&& post_processor) noexcept {
             if (r.second.empty()) {
                 if (post_processor) {
                     if (r.first >= 400 && r.first < 600) {
@@ -258,7 +218,8 @@ namespace util::Http {
             }
         }
 
-        /*void process(std::pair<int, std::string> r, std::string const& method, std::map<std::string, std::string> const& headers, std::string_view body,
+        /*
+        void process(std::pair<int, std::string> r, std::string const& method, std::map<std::string, std::string> const& headers, std::string_view body,
             std::string const& file_name, std::function<void(int r)>&& post_processor) noexcept {
             if (r.second.empty()) {
                 if (post_processor) {
@@ -267,14 +228,17 @@ namespace util::Http {
             } else {
                 transfer(method, r.second, headers, body, file_name, std::move(post_processor));
             }
-        }*/
+        }
+        */
 
         std::vector<std::shared_ptr<std::thread>> threads_;
 
         // Report a failure
-        /*void fail(beast::error_code ec, char const* what) {
+        /*
+        void fail(beast::error_code ec, char const* what) {
             log_error << what << ": " << ec.message() << "\n";
-        }*/
+        }
+        */
 
         // Performs an HTTP GET and prints the response
         class session : public std::enable_shared_from_this<session> {
@@ -598,42 +562,6 @@ namespace util::Http {
             // Log::log("Error: %s", e.what());
             log_error << "http transfer exception: " << url << " " << e.what();
         }
-
-        //} else {
-        //    log_info << "post_processor is null";
-        //                }
-        //    catch (std::exception const& e) {
-        //        // shutdown_ssl(stream);
-        //        try {
-        //            boost::beast::get_lowest_layer(stream).close();
-        //            log_error << "http transfer exception: " << url << " " << e.what();
-        //        } catch (...) {
-        //            log_error << "boost::beast::get_lowest_layer(stream).close error";
-        //        }
-        //
-        //        //  throw; // 重新抛出异常供外层处理
-        //    }
-        //
-        //                }
-        // catch (std::exception const& e) {
-        //    // shutdown_plain(stream);
-        //    if (post_processor) {
-        //        post_processor("");
-        //    } else {
-        //        log_info << "post_processor is null";
-        //    }
-        //    try {
-        //        stream.close();
-        //        log_error << "http transfer exception: " << url << " " << e.what();
-        //    } catch (...) {
-        //        log_error << "http stream.close()";
-        //        if (post_processor) {
-        //            post_processor("");
-        //        } else {
-        //            log_info << "post_processor is null";
-        //        }
-        //    }
-        //  throw; // 重新抛出异常供外层处理
     }
 
     void transfer(std::string const& method, std::string const& url, std::map<std::string, std::string> const& headers, std::string const& body,
@@ -641,76 +569,75 @@ namespace util::Http {
         transfer(method, url, headers, std::string_view{body.begin(), body.end()}, std::move(post_processor));
     }
 
-    //void transfer(std::string const& method, std::string const& url, std::map<std::string, std::string> const& headers, std::string_view body, std::string const& file_name,
-    //    std::function<void(int r)>&& post_processor) noexcept {
-    //    try {
-    //        // log_info << "transfer:" << url;
-    //        auto const& [success, scheme, host, port, target] = parse_url(url);
-    //        if (!success) {
-    //            log_error << "url parse failure! url is " << url;
-    //            post_processor(1);
-    //            return;
-    //        }
-    //        // The io_context is required for all I/O
-    //        boost::asio::io_context ioc;
-    //        // These objects perform our I/O
-    //        boost::asio::ip::tcp::resolver resolver(ioc);
-    //        // std::printf("%s://%s:%s%s\n", std::string(s).c_str(), std::string(host).c_str(), std::string(port).c_str(), std::string(target).c_str());
-    //        //  Look up the domain name
-    //        auto const results = resolver.resolve(host, port);
-    //        auto req = construct_request(method, std::string(host), std::string(target), headers, body);
-    //        // This buffer is used for reading and must be persisted
-    //        boost::beast::flat_buffer buffer;
-    //        // Declare a container to hold the response
-    //        boost::beast::error_code ec;
-    //        boost::beast::http::response_parser<boost::beast::http::file_body> parser;
-    //        parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
-    //        parser.get().body().open(file_name.c_str(), boost::beast::file_mode::write, ec);
-    //        if (scheme == "https") {
-    //            // The SSL context is required, and holds certificates
-    //            boost::asio::ssl::context ctx(boost::asio::ssl::context::tlsv12_client);
-    //            // This holds the root certificate used for verification
-    //            load_root_certificates(ctx);
-    //            // Verify the remote server's certificate
-    //            ctx.set_verify_mode(boost::asio::ssl::verify_peer);
-    //            // boost::beast::ssl_stream<boost::beast::tcp_stream> stream(ioc, ctx);
-    //            auto stream = std::make_shared<boost::beast::ssl_stream<boost::beast::tcp_stream>>(ioc, ctx);
-    //            try {
-    //                //  Set SNI Hostname (many hosts need this to handshake successfully)
-    //                if (!SSL_set_tlsext_host_name(stream->native_handle(), std::string(host).c_str())) {
-    //                    boost::beast::error_code ec{static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category()};
-    //                    // FIXME throw boost::beast::system_error{ec};
-    //                    log_error << "SSL_set_tlsext_host_name:" << ec.message();
-    //                }
-    //                // Make the connection on the IP address we get from a lookup
-    //                boost::beast::get_lowest_layer(*stream).connect(results);
-    //                // Perform the SSL handshake
-    //                stream->handshake(boost::asio::ssl::stream_base::client);
-    //                auto r = transeiver(*stream, req, buffer, parser);
-    //                shutdown_ssl(stream);
-    //                stream = nullptr;
-    //                process(r, method, headers, body, file_name, std::move(post_processor));
-    //            } catch (std::exception const& e) {
-    //                boost::beast::get_lowest_layer(*stream).close();
+    // void transfer(std::string const& method, std::string const& url, std::map<std::string, std::string> const& headers, std::string_view body, std::string const& file_name,
+    //     std::function<void(int r)>&& post_processor) noexcept {
+    //     try {
+    //         // log_info << "transfer:" << url;
+    //         auto const& [success, scheme, host, port, target] = parse_url(url);
+    //         if (!success) {
+    //             log_error << "url parse failure! url is " << url;
+    //             post_processor(1);
+    //             return;
+    //         }
+    //         // The io_context is required for all I/O
+    //         boost::asio::io_context ioc;
+    //         // These objects perform our I/O
+    //         boost::asio::ip::tcp::resolver resolver(ioc);
+    //         // std::printf("%s://%s:%s%s\n", std::string(s).c_str(), std::string(host).c_str(), std::string(port).c_str(), std::string(target).c_str());
+    //         //  Look up the domain name
+    //         auto const results = resolver.resolve(host, port);
+    //         auto req = construct_request(method, std::string(host), std::string(target), headers, body);
+    //         // This buffer is used for reading and must be persisted
+    //         boost::beast::flat_buffer buffer;
+    //         // Declare a container to hold the response
+    //         boost::beast::error_code ec;
+    //         boost::beast::http::response_parser<boost::beast::http::file_body> parser;
+    //         parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
+    //         parser.get().body().open(file_name.c_str(), boost::beast::file_mode::write, ec);
+    //         if (scheme == "https") {
+    //             // The SSL context is required, and holds certificates
+    //             boost::asio::ssl::context ctx(boost::asio::ssl::context::tlsv12_client);
+    //             // This holds the root certificate used for verification
+    //             load_root_certificates(ctx);
+    //             // Verify the remote server's certificate
+    //             ctx.set_verify_mode(boost::asio::ssl::verify_peer);
+    //             // boost::beast::ssl_stream<boost::beast::tcp_stream> stream(ioc, ctx);
+    //             auto stream = std::make_shared<boost::beast::ssl_stream<boost::beast::tcp_stream>>(ioc, ctx);
+    //             try {
+    //                 //  Set SNI Hostname (many hosts need this to handshake successfully)
+    //                 if (!SSL_set_tlsext_host_name(stream->native_handle(), std::string(host).c_str())) {
+    //                     boost::beast::error_code ec{static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category()};
+    //                     // FIXME throw boost::beast::system_error{ec};
+    //                     log_error << "SSL_set_tlsext_host_name:" << ec.message();
+    //                 }
+    //                 // Make the connection on the IP address we get from a lookup
+    //                 boost::beast::get_lowest_layer(*stream).connect(results);
+    //                 // Perform the SSL handshake
+    //                 stream->handshake(boost::asio::ssl::stream_base::client);
+    //                 auto r = transeiver(*stream, req, buffer, parser);
+    //                 shutdown_ssl(stream);
+    //                 stream = nullptr;
+    //                 process(r, method, headers, body, file_name, std::move(post_processor));
+    //             } catch (std::exception const& e) {
+    //                 boost::beast::get_lowest_layer(*stream).close();
+    //                 log_error << "http transfer exception: " << url << " " << e.what();
+    //                 //  throw; // 重新抛出异常供外层处理
+    //             }
+    //         } else {
+    //             // boost::beast::tcp_stream stream(ioc);
+    //             auto stream = std::make_shared<boost::beast::tcp_stream>(ioc);
+    //             try {
+    //                 // Make the connection on the IP address we get from a lookup
+    //                 stream->connect(results);
+    //                 auto r = transeiver(*stream, req, buffer, parser);
+    //                 shutdown_plain(stream);
+    //                 process(r, method, headers, body, file_name, std::move(post_processor));
+    //             } catch (std::exception const& e) {
+    //                 try {
+    //                     stream->close();
+    //                 } catch (...) {}
     //                log_error << "http transfer exception: " << url << " " << e.what();
-    //                //  throw; // 重新抛出异常供外层处理
-    //            }
-    //        } else {
-    //            // boost::beast::tcp_stream stream(ioc);
-    //            auto stream = std::make_shared<boost::beast::tcp_stream>(ioc);
-    //            try {
-    //                // Make the connection on the IP address we get from a lookup
-    //                stream->connect(results);
-    //                auto r = transeiver(*stream, req, buffer, parser);
-    //                shutdown_plain(stream);
-    //                process(r, method, headers, body, file_name, std::move(post_processor));
-    //            } catch (std::exception const& e) {
-    //                try {
-    //                    stream->close();
-    //                } catch (...) {}
-
-    //                log_error << "http transfer exception: " << url << " " << e.what();
-    //                //  throw; // 重新抛出异常供外层处理
+    //                // throw; // 重新抛出异常供外层处理
     //            }
     //        }
     //    } catch (std::exception const& e) {
@@ -782,6 +709,7 @@ namespace util::Http {
             thread = nullptr;
         }
     }
+    
     // void async_transfer(std::string const& method, std::string const& url, std::map<std::string, std::string> const& headers, std::string const& body,
     //     std::string const& send_file_name, std::function<void(int r)>&& post_processor) noexcept {
     //     try {
